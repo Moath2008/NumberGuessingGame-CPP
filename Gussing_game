@@ -1,0 +1,272 @@
+/*
+ * =====================================================
+ *  Number Guessing Game - C++ Individual Assignment
+ *  Student: Moath
+ *  Course:  Structural Programming in C++
+ * =====================================================
+ *
+ *  Concepts Used:
+ *   - Struct (Player)
+ *   - Functions
+ *   - Arrays (game history)
+ *   - Control structures (loops, if/else, switch)
+ *   - Random number generation
+ * =====================================================
+ */
+
+#include <iostream>
+#include <cstdlib>
+#include <ctime>
+#include <string>
+
+using namespace std;
+
+// ─────────────────────────────────────────────
+//  Constants
+// ─────────────────────────────────────────────
+const int MAX_HISTORY = 50;
+
+// ─────────────────────────────────────────────
+//  Struct: Player
+// ─────────────────────────────────────────────
+struct Player {
+    string name;
+    int totalGames;
+    int totalGuesses;
+    int bestScore;           // fewest guesses in a single round
+    int history[MAX_HISTORY]; // guesses per round
+};
+
+// ─────────────────────────────────────────────
+//  Struct: GameRound
+// ─────────────────────────────────────────────
+struct GameRound {
+    int secretNumber;
+    int guessCount;
+    bool won;
+};
+
+// ─────────────────────────────────────────────
+//  Function Prototypes
+// ─────────────────────────────────────────────
+void        initPlayer(Player &p);
+void        printHeader();
+void        printMenu();
+int         getDifficultyRange(int choice);
+GameRound   playRound(int range);
+void        updatePlayer(Player &p, GameRound round);
+void        printStats(const Player &p);
+void        printHistory(const Player &p);
+void        printResult(GameRound round);
+bool        askPlayAgain();
+
+// ─────────────────────────────────────────────
+//  Main
+// ─────────────────────────────────────────────
+int main() {
+    srand(static_cast<unsigned int>(time(0)));
+
+    Player player;
+    initPlayer(player);
+
+    printHeader();
+
+    cout << "Enter your name: ";
+    getline(cin, player.name);
+    cout << "\nWelcome, " << player.name << "!\n\n";
+
+    bool playing = true;
+
+    while (playing) {
+        printMenu();
+
+        int menuChoice;
+        cin >> menuChoice;
+
+        switch (menuChoice) {
+
+            case 1: {   // Play a round
+                cout << "\n--- Select Difficulty ---\n";
+                cout << "1. Easy   (1 - 50)\n";
+                cout << "2. Medium (1 - 100)\n";
+                cout << "3. Hard   (1 - 200)\n";
+                cout << "Choice: ";
+                int diff;
+                cin >> diff;
+
+                int range = getDifficultyRange(diff);
+
+                GameRound round = playRound(range);
+                printResult(round);
+                updatePlayer(player, round);
+
+                if (!askPlayAgain())
+                    playing = false;
+                break;
+            }
+
+            case 2:   // View stats
+                printStats(player);
+                break;
+
+            case 3:   // View history
+                printHistory(player);
+                break;
+
+            case 4:   // Quit
+                playing = false;
+                break;
+
+            default:
+                cout << "Invalid choice. Please try again.\n";
+                break;
+        }
+    }
+
+    // Farewell summary
+    cout << "\n==========================================\n";
+    cout << "  Thanks for playing, " << player.name << "!\n";
+    cout << "  Total games played : " << player.totalGames   << "\n";
+    cout << "  Total guesses made : " << player.totalGuesses << "\n";
+    if (player.bestScore > 0)
+        cout << "  Best score (fewest guesses): " << player.bestScore << "\n";
+    cout << "==========================================\n";
+
+    return 0;
+}
+
+// ─────────────────────────────────────────────
+//  Function Definitions
+// ─────────────────────────────────────────────
+
+/* Initialize a player with default values */
+void initPlayer(Player &p) {
+    p.name         = "";
+    p.totalGames   = 0;
+    p.totalGuesses = 0;
+    p.bestScore    = -1;  // -1 means no round played yet
+    for (int i = 0; i < MAX_HISTORY; i++)
+        p.history[i] = 0;
+}
+
+/* Print a decorative header */
+void printHeader() {
+    cout << "==========================================\n";
+    cout << "       NUMBER GUESSING GAME (C++)\n";
+    cout << "     Structural Programming Project\n";
+    cout << "==========================================\n\n";
+}
+
+/* Print the main menu */
+void printMenu() {
+    cout << "\n---------- MAIN MENU ----------\n";
+    cout << "1. Play a new round\n";
+    cout << "2. View my statistics\n";
+    cout << "3. View guess history\n";
+    cout << "4. Quit\n";
+    cout << "--------------------------------\n";
+    cout << "Choice: ";
+}
+
+/* Return upper range based on difficulty choice */
+int getDifficultyRange(int choice) {
+    switch (choice) {
+        case 1:  return 50;
+        case 3:  return 200;
+        default: return 100;  // case 2 or invalid → medium
+    }
+}
+
+/* Run a single game round and return the result */
+GameRound playRound(int range) {
+    GameRound round;
+    round.secretNumber = rand() % range + 1;
+    round.guessCount   = 0;
+    round.won          = false;
+
+    int guess;
+    cout << "\nGuess a number between 1 and " << range << ":\n";
+
+    do {
+        cout << "Your guess: ";
+        cin  >> guess;
+        round.guessCount++;
+
+        if (guess < round.secretNumber)
+            cout << "  >> Too LOW!  Try higher.\n";
+        else if (guess > round.secretNumber)
+            cout << "  >> Too HIGH! Try lower.\n";
+        else {
+            round.won = true;
+            cout << "  >> Correct!\n";
+        }
+
+    } while (!round.won);
+
+    return round;
+}
+
+/* Update player stats after a round */
+void updatePlayer(Player &p, GameRound round) {
+    // Store in history array (guard against overflow)
+    if (p.totalGames < MAX_HISTORY)
+        p.history[p.totalGames] = round.guessCount;
+
+    p.totalGames++;
+    p.totalGuesses += round.guessCount;
+
+    // Track best score
+    if (p.bestScore == -1 || round.guessCount < p.bestScore)
+        p.bestScore = round.guessCount;
+}
+
+/* Print round result with a performance message */
+void printResult(GameRound round) {
+    cout << "\n========================================\n";
+    cout << "  The number was: " << round.secretNumber << "\n";
+    cout << "  You guessed it in " << round.guessCount << " attempt(s)!\n";
+
+    if      (round.guessCount <= 3)  cout << "  Excellent! You're a mind reader!\n";
+    else if (round.guessCount <= 6)  cout << "  Great job! Very efficient.\n";
+    else if (round.guessCount <= 10) cout << "  Good effort! Keep practicing.\n";
+    else                             cout << "  Better luck next time!\n";
+
+    cout << "========================================\n";
+}
+
+/* Print overall player statistics */
+void printStats(const Player &p) {
+    cout << "\n======= STATISTICS FOR " << p.name << " =======\n";
+    cout << "  Games played   : " << p.totalGames   << "\n";
+    cout << "  Total guesses  : " << p.totalGuesses << "\n";
+
+    if (p.totalGames > 0) {
+        double avg = static_cast<double>(p.totalGuesses) / p.totalGames;
+        cout << "  Average guesses: " << avg << "\n";
+        cout << "  Best score     : " << p.bestScore << " guess(es)\n";
+    } else {
+        cout << "  No games played yet.\n";
+    }
+    cout << "==========================================\n";
+}
+
+/* Print the per-round guess history */
+void printHistory(const Player &p) {
+    cout << "\n======= GUESS HISTORY =======\n";
+    if (p.totalGames == 0) {
+        cout << "  No rounds played yet.\n";
+    } else {
+        int rounds = (p.totalGames < MAX_HISTORY) ? p.totalGames : MAX_HISTORY;
+        for (int i = 0; i < rounds; i++)
+            cout << "  Round " << (i + 1) << ": " << p.history[i] << " guess(es)\n";
+    }
+    cout << "==============================\n";
+}
+
+/* Ask the player if they want to play again */
+bool askPlayAgain() {
+    char answer;
+    cout << "\nPlay again? (y/n): ";
+    cin  >> answer;
+    return (answer == 'y' || answer == 'Y');
+}
